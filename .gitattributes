@@ -1,0 +1,13 @@
+# 统一换行符，避免 Windows 批处理被编辑器/git 转成 LF 后双击报错
+* text=auto
+
+# 批处理必须是 CRLF：LF 行尾会让 cmd 把 for/if 块解析错乱
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Python 与前端保持 LF
+*.py   text eol=lf
+*.html text eol=lf
+*.css  text eol=lf
+*.js   text eol=lf
+*.md   text eol=lf

@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>图文摘要 · 纯本地</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#ffffff; --ink:#1a2230; --sub:#5d6879; --muted:#8a94a6;
+    --line:#e4e8ef; --accent:#2f6bff; --accent-soft:#eef3ff;
+    --green:#14915c; --amber:#b26a00; --purple:#7a4bd0; --red:#c0392b;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink); min-height:100vh;
+    font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:28px 24px 64px}
+
+  /* ---------- 页头 ---------- */
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand i{width:10px;height:10px;border-radius:50%;background:var(--accent);display:block;box-shadow:0 0 0 4px var(--accent-soft)}
+  .brand h1{font-size:19px;margin:0;font-weight:650;letter-spacing:.2px}
+  .brand span{font-size:12px;color:var(--muted);margin-left:2px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap}
+  .badge{
+    font-size:12px;color:var(--sub);background:var(--card);border:1px solid var(--line);
+    padding:5px 10px;border-radius:999px;white-space:nowrap
+  }
+  .badge b{color:var(--ink);font-weight:600}
+  .engine-note{
+    margin:-8px 0 16px;padding:9px 14px;border-radius:10px;
+    font-size:12.5px;line-height:1.6;color:#22489e;
+    background:var(--accent-soft);border:1px solid #d6e2ff;
+  }
+
+  /* ---------- 上传区 ---------- */
+  .drop{
+    background:var(--card);border:2px dashed #cfd6e2;border-radius:var(--radius);
+    padding:44px 24px;text-align:center;cursor:pointer;
+    transition:border-color .15s, background .15s, transform .15s;
+  }
+  .drop:hover{border-color:#a9b6cc}
+  .drop.over{border-color:var(--accent);background:var(--accent-soft);transform:scale(1.005)}
+  .drop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .drop .icon{font-size:30px;line-height:1;color:#b9c3d4;margin-bottom:10px}
+  .drop.over .icon{color:var(--accent)}
+  .drop p{margin:0}
+  .drop .t{font-size:16px;font-weight:600;margin-bottom:6px}
+  .drop .s{font-size:13px;color:var(--sub)}
+  .link{background:none;border:0;padding:0;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+
+  /* ---------- 任务卡 ---------- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-top:16px}
+  .row{display:flex;align-items:center;gap:12px}
+  .file-ico{
+    width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:var(--accent-soft);
+    color:var(--accent);display:grid;place-items:center;font-size:16px;font-weight:600
+  }
+  .meta{min-width:0;flex:1}
+  .meta .name{font-weight:600;font-size:14px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .meta .stage{font-size:12.5px;color:var(--sub);margin:2px 0 0}
+  .pct{font-variant-numeric:tabular-nums;font-weight:650;font-size:15px;color:var(--accent);min-width:44px;text-align:right}
+  .bar{height:6px;border-radius:999px;background:#eef1f6;margin:14px 0 10px;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;border-radius:999px;background:var(--accent);transition:width .35s ease}
+  .card.done .bar > i{background:var(--green)}
+  .card.done .pct{color:var(--green)}
+  .card.failed .bar > i{background:var(--red)}
+  .foot{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+
+  /* ---------- 错误 ---------- */
+  .alert{
+    margin-top:16px;padding:14px 18px;border-radius:var(--radius);
+    background:#fdf1ef;border:1px solid #f3d3ce;color:#8f2f22;font-size:14px
+  }
+  .alert b{display:block;margin-bottom:4px}
+  .alert code{background:#fff;border:1px solid #f3d3ce;border-radius:5px;padding:1px 5px;font-size:12px}
+
+  /* ---------- 结果 ---------- */
+  #result{margin-top:22px}
+  .res-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .res-head h2{margin:0;font-size:24px;line-height:1.35;font-weight:680;letter-spacing:.2px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .chip{font-size:11.5px;color:var(--sub);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+  .chip.k{background:var(--accent-soft);border-color:#d6e2ff;color:#22489e}
+  .tldr{
+    font-size:16px;line-height:1.75;color:#20293a;margin:16px 0 0;
+    padding:16px 18px;background:var(--card);border:1px solid var(--line);
+    border-left:3px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0
+  }
+  .warn{margin:12px 0 0;font-size:12.5px;color:var(--amber);background:#fdf7ec;border:1px solid #f2e2c4;border-radius:8px;padding:8px 12px}
+
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:14px}
+  .col{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--c,#ccc);border-radius:12px;padding:14px 15px}
+  .col-h{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+  .col-h .n{font-size:11px;color:var(--c);font-weight:700;letter-spacing:.5px}
+  .col-h .t{font-size:14px;font-weight:650;margin:0;color:var(--ink)}
+  .col-h .s{font-size:11px;color:var(--muted);margin:1px 0 0}
+  .col ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+  .col li{font-size:13px;line-height:1.65;color:#2b3446;padding-left:11px;position:relative}
+  .col li::before{content:"";position:absolute;left:0;top:.62em;width:4px;height:4px;border-radius:50%;background:var(--c);opacity:.65}
+  .col li.none{color:var(--muted);font-style:normal;padding-left:0}
+  .col li.none::before{display:none}
+
+  .res-foot{margin-top:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+
+  /* ---------- 结果操作区：导出 / 重新选择 ---------- */
+  .res-actions{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .export-hint{margin-right:auto;font-size:12.5px;color:var(--green);align-self:center}
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;
+    font:inherit;font-size:13.5px;font-weight:600;line-height:1;
+    padding:10px 18px;border-radius:10px;cursor:pointer;
+    border:1px solid var(--line);background:var(--card);color:var(--ink);
+    transition:background .15s,border-color .15s,box-shadow .15s,transform .06s;
+  }
+  .btn:hover{background:#f7f9fc;border-color:#c9d3e4}
+  .btn:active{transform:translateY(1px)}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(47,107,255,.22)}
+  .btn.primary:hover{background:#255ae0;border-color:#255ae0}
+  .btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+  .btn-ico{font-size:14px;line-height:1}
+  .note{font-size:12px;color:var(--muted);margin:0}
+
+  /* ---------- 底部 ---------- */
+  footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  footer a{color:var(--sub)}
+  [hidden]{display:none !important}
+
+  @media (max-width:560px){
+    .wrap{padding:18px 16px 48px}
+    .res-head h2{font-size:20px}
+    .drop{padding:32px 16px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <i></i>
+      <h1>图文摘要</h1>
+      <span>上传图片 / PDF / Word，返回五栏结构化摘要</span>
+    </div>
+    <div class="badges" id="badges">
+      <span class="badge">纯本地 · 不联网</span>
+    </div>
+  </header>
+
+  <p class="engine-note" id="engineNote" hidden></p>
+
+  <!-- 上传区 -->
+  <section class="drop" id="drop" tabindex="0" role="button" aria-label="选择文件或把文件拖到这里">
+    <input type="file" id="file" accept=".png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,.pdf,.docx,.txt,.md" hidden>
+    <div class="icon">⇪</div>
+    <p class="t">把文件拖到这里</p>
+    <p class="s">
+      或 <button type="button" class="link" id="pick">选择文件</button>
+      　图片 / PDF / Word / TXT · 单个不超过 20 MB
+    </p>
+  </section>
+
+  <!-- 任务进度 -->
+  <section class="card" id="task" hidden>
+    <div class="row">
+      <div class="file-ico" id="taskIcon">▤</div>
+      <div class="meta">
+        <p class="name" id="taskName">—</p>
+        <p class="stage" id="taskStage">已入队</p>
+      </div>
+      <div class="pct" id="taskPct">0%</div>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="foot">
+      <span id="taskHint">正在排队…</span>
+      <button type="button" class="link" id="reset">重新选择</button>
+    </div>
+  </section>
+
+  <!-- 错误 -->
+  <section class="alert" id="error" hidden></section>
+
+  <!-- 结果 -->
+  <section id="result" hidden>
+    <div class="res-head">
+      <div>
+        <h2 id="resTitle">—</h2>
+        <div class="chips" id="resChips"></div>
+      </div>
+    </div>
+    <p class="tldr" id="resTldr"></p>
+    <p class="warn" id="resWarn" hidden></p>
+    <div class="cols" id="cols"></div>
+    <div class="res-foot">
+      <div class="chips" id="resKeywords"></div>
+      <p class="note" id="resNote"></p>
+    </div>
+    <div class="res-actions">
+      <span class="export-hint" id="exportHint" hidden></span>
+      <button type="button" class="btn primary" id="exportBtn" disabled>
+        <span class="btn-ico">⬇</span>导出摘要 .md
+      </button>
+      <button type="button" class="btn" id="againBtn">重新选择文件</button>
+    </div>
+  </section>
+
+  <footer>
+    <span id="privacy">所有处理都在本机完成 · 结果与上传原文件到时自动删除</span>
+    <span><a href="/docs" target="_blank" rel="noreferrer">接口文档</a></span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------------- 常量 ----------------
+  var MAX_BYTES = 20 * 1024 * 1024;
+  var ACCEPT = ['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.tif', '.tiff', '.pdf', '.docx', '.txt', '.md'];
+  var POLL_MS = 800;
+  var MAX_POLLS = 900;                     // 约 12 分钟，够 50 页扫描件 OCR
+
+  var SECTIONS = [
+    { key: 'what',       label: '讲了什么', hint: '内容范围',     color: '#2f6bff' },
+    { key: 'conclusion', label: '结论',     hint: '主要判断',     color: '#14915c' },
+    { key: 'numbers',    label: '关键数字', hint: '原样取自正文', color: '#b26a00' },
+    { key: 'todos',      label: '待办',     hint: '谁做什么',     color: '#7a4bd0' },
+    { key: 'doubts',     label: '存疑',     hint: '需回原文核对', color: '#b0563a' }
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { timer: null, role: '', retention: 24, engine: '', doc: null, meta: null, filename: '' };
+
+  // ---------------- 工具 ----------------
+  function api(path, options) {
+    return fetch(path, options).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        if (!res.ok || body.ok === false) {
+          var msg = (body.error && body.error.message) || ('请求失败（HTTP ' + res.status + '）');
+          var err = new Error(msg);
+          err.code = (body.error && body.error.code) || 'http_' + res.status;
+          throw err;
+        }
+        return body.data;
+      });
+    });
+  }
+
+  function humanSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  function providerLabel(provider) {
+    if (!provider) return '未知引擎';
+    if (provider.indexOf('ollama:') === 0) return '本机大模型 · ' + provider.slice(7);
+    if (provider === 'extractive') return '本地轻量提取引擎';
+    if (provider === 'mock') return '离线演示引擎（Mock）';
+    if (provider === 'fallback') return '最小可用结果';
+    return provider;
+  }
+
+  function chip(text, kind) {
+    var el = document.createElement('span');
+    el.className = 'chip' + (kind ? ' ' + kind : '');
+    el.textContent = text;
+    return el;
+  }
+
+  // 引擎降级提示条：后端在 /info /upload /status /result 里都会回 engine_used
+  function setEngineBanner(engine) {
+    var name = String(engine || '');
+    if (!name || name === state.engine) return;      // 没拿到或没变化就不动
+    state.engine = name;
+
+    var note = $('engineNote');
+    if (name.indexOf('ollama') === 0) {              // 用上本机大模型了，收起提示
+      hide(note);
+      return;
+    }
+    note.textContent =
+      '提示：未检测到本地大模型环境，已自动切换至极速离线提取引擎，保证您的数据隐私与极速响应。';
+    show(note);
+  }
+
+  // ---------------- 页面状态 ----------------
+  function hide(el) { el.hidden = true; }
+  function show(el) { el.hidden = false; }
+
+  function reset() {
+    if (state.timer) { clearInterval(state.timer); state.timer = null; }
+    state.role = '';
+    state.doc = null;
+    state.meta = null;
+    hide($('task')); hide($('result')); hide($('error'));
+    $('bar').style.width = '0%';
+    $('taskPct').textContent = '0%';
+    $('task').className = 'card';
+    $('file').value = '';
+    $('exportBtn').disabled = true;
+    $('exportHint').hidden = true;
+  }
+
+  function showError(message, hint) {
+    var box = $('error');
+    box.textContent = '';
+    var b = document.createElement('b');
+    b.textContent = message;
+    box.appendChild(b);
+    if (hint) {
+      var span = document.createElement('span');
+      span.textContent = hint;
+      box.appendChild(span);
+    }
+    show(box);
+  }
+
+  function setProgress(percent, message, status) {
+    var p = Math.max(0, Math.min(100, Number(percent) || 0));
+    $('bar').style.width = p + '%';
+    $('taskPct').textContent = p + '%';
+    if (message) $('taskStage').textContent = message;
+    if (status === 'running' && p < 5) $('taskPct').textContent = '处理中';
+  }
+
+  // ---------------- 上传 ----------------
+  function validate(file) {
+    var name = (file.name || '').toLowerCase();
+    var dot = name.lastIndexOf('.');
+    var ext = dot >= 0 ? name.slice(dot) : '';
+    if (ACCEPT.indexOf(ext) < 0) {
+      return '不支持 ' + (ext || '无扩展名') + ' 的文件，可用类型：' + ACCEPT.join(' ');
+    }
+    if (file.size === 0) return '这个文件是空的';
+    if (file.size > MAX_BYTES) return '文件 ' + humanSize(file.size) + '，超过 20 MB 上限';
+    return '';
+  }
+
+  function startUpload(file) {
+    reset();
+    var problem = validate(file);
+    if (problem) { showError(problem); return; }
+
+    state.role = 'upload';
+    state.filename = file.name;
+    $('taskName').textContent = file.name;
+    $('taskStage').textContent = '正在上传…';
+    $('taskHint').textContent = humanSize(file.size) + ' · 上传完成后自动开始处理';
+    $('taskPct').textContent = '0%';
+    show($('task'));
+
+    var form = new FormData();
+    form.append('file', file);
+
+    api('/upload', { method: 'POST', body: form })
+      .then(function (data) {
+        state.role = data.id;
+        setEngineBanner(data.engine_used);
+        $('taskHint').textContent = '任务 ' + data.id.slice(0, 8) + ' · 正在排队';
+        poll(data.id);
+      })
+      .catch(function (err) {
+        if (err.code === 'http_413') {
+          showError('文件太大', '超过 20 MB 上限，请压缩或拆分后再试');
+        } else if (err.message && err.message.indexOf('fetch') >= 0) {
+          showError('连不上后端服务', '请确认 run.bat 的窗口还开着（服务地址 127.0.0.1:8000）');
+        } else {
+          showError(err.message || '上传失败');
+        }
+        hide($('task'));
+        state.role = '';
+      });
+  }
+
+  // ---------------- 轮询 ----------------
+  function poll(id) {
+    var ticks = 0;
+    if (state.timer) clearInterval(state.timer);
+
+    var tick = function () {
+      ticks += 1;
+      api('/status/' + id).then(function (data) {
+        setProgress(data.progress, data.message, data.status);
+        setEngineBanner(data.engine_used);
+
+        if (data.status === 'done') {
+          clearInterval(state.timer); state.timer = null;
+          $('task').className = 'card done';
+          $('taskStage').textContent = '处理完成';
+          $('taskPct').textContent = '100%';
+          $('taskHint').textContent = (data.chars || 0) + ' 字 · 用时 ' + (data.elapsed || 0) + ' 秒';
+          loadResult(id);
+          return;
+        }
+        if (data.status === 'failed') {
+          clearInterval(state.timer); state.timer = null;
+          $('task').className = 'card failed';
+          showError('处理失败', data.error || '');
+          return;
+        }
+        if (ticks >= MAX_POLLS) {
+          clearInterval(state.timer); state.timer = null;
+          showError('处理超时', '任务可能还在后台跑，稍后用任务 ID 查一下状态');
+        }
+      }).catch(function (err) {
+        clearInterval(state.timer); state.timer = null;
+        if (err.code === 'task_not_found') {
+          showError('这个任务已经找不到了', '可能已超过保留期被自动删除，请重新上传');
+        } else {
+          showError(err.message || '状态查询失败');
+        }
+      });
+    };
+
+    tick();
+    state.timer = setInterval(tick, POLL_MS);
+  }
+
+  // ---------------- 结果 ----------------
+  function loadResult(id) {
+    api('/result/' + id).then(function (data) {
+      renderResult(data);
+    }).catch(function (err) {
+      showError(err.message || '取结果失败');
+    });
+  }
+
+  function renderResult(data) {
+    var doc = data.doc || {};
+    setEngineBanner(data.engine_used || doc.provider);
+
+    $('resTitle').textContent = doc.title || data.filename || '未命名文档';
+
+    var chips = $('resChips');
+    chips.textContent = '';
+    if (doc.doc_type) chips.appendChild(chip(doc.doc_type, 'k'));
+    chips.appendChild(chip(providerLabel(doc.provider)));
+    chips.appendChild(chip((data.source_chars || 0) + ' 字'));
+    chips.appendChild(chip('用时 ' + (data.elapsed || 0) + ' 秒'));
+
+    var tldr = $('resTldr');
+    if (doc.tldr) { tldr.textContent = doc.tldr; show(tldr); } else { hide(tldr); }
+
+    var warn = $('resWarn');
+    if (doc.warning) { warn.textContent = doc.warning; show(warn); } else { hide(warn); }
+
+    var wrap = $('cols');
+    wrap.textContent = '';
+    SECTIONS.forEach(function (sec, i) {
+      var items = Array.isArray(doc[sec.key]) ? doc[sec.key] : [];
+
+      var col = document.createElement('div');
+      col.className = 'col';
+      col.style.setProperty('--c', sec.color);
+
+      var head = document.createElement('div');
+      head.className = 'col-h';
+      var n = document.createElement('span');
+      n.className = 'n';
+      n.textContent = ('0' + (i + 1)).slice(-2);
+      var box = document.createElement('div');
+      var t = document.createElement('p');
+      t.className = 't';
+      t.textContent = sec.label;
+      var s = document.createElement('p');
+      s.className = 's';
+      s.textContent = sec.hint;
+      box.appendChild(t); box.appendChild(s);
+      head.appendChild(n); head.appendChild(box);
+
+      var ul = document.createElement('ul');
+      if (items.length === 0) {
+        var none = document.createElement('li');
+        none.className = 'none';
+        none.textContent = '未提及';
+        ul.appendChild(none);
+      } else {
+        items.forEach(function (text) {
+          var li = document.createElement('li');
+          li.textContent = String(text);
+          ul.appendChild(li);
+        });
+      }
+
+      col.appendChild(head);
+      col.appendChild(ul);
+      wrap.appendChild(col);
+    });
+
+    var kws = $('resKeywords');
+    kws.textContent = '';
+    (doc.keywords || []).forEach(function (word) { kws.appendChild(chip(String(word))); });
+
+    state.doc = doc;
+    state.meta = data;
+    $('exportBtn').disabled = false;
+
+    $('resNote').textContent = '结果与上传原文件将在 ' + state.retention + ' 小时后自动删除';
+    show($('result'));
+    $('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ---------------- 导出 Markdown（纯前端，不请求后端）----------------
+
+  function pad2(n) {
+    return (n < 10 ? '0' : '') + n;
+  }
+
+  function fileStamp() {
+    var d = new Date();
+    return '' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate())
+      + '-' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds());
+  }
+
+  function timeText() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate())
+      + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+
+  // 把当前五栏 + 引擎信息拼成标准 Markdown
+  function buildMarkdown() {
+    var doc = state.doc || {};
+    var meta = state.meta || {};
+    var out = [];
+
+    out.push('# ' + (doc.title || '未命名文档'));
+    out.push('');
+    out.push('> 导出于 ' + timeText() + ' · 引擎：' + providerLabel(doc.provider));
+    out.push('');
+
+    if (doc.tldr) {
+      out.push('**一句话总结**：' + doc.tldr);
+      out.push('');
+    }
+
+    SECTIONS.forEach(function (sec) {
+      out.push('## ' + sec.label);
+      out.push('');
+      var items = Array.isArray(doc[sec.key]) ? doc[sec.key] : [];
+      if (items.length === 0) {
+        out.push('- （未提及）');
+      } else {
+        items.forEach(function (item) {
+          out.push('- ' + String(item).replace(/\s*\n\s*/g, ' ').trim());
+        });
+      }
+      out.push('');
+    });
+
+    if (doc.keywords && doc.keywords.length) {
+      out.push('## 关键词');
+      out.push('');
+      out.push(doc.keywords.join('、'));
+      out.push('');
+    }
+
+    out.push('---');
+    out.push('');
+    out.push('- 文件名：' + (state.filename || meta.filename || '-'));
+    out.push('- 文档类型：' + (doc.doc_type || '-'));
+    out.push('- 原文长度：' + (meta.source_chars || 0) + ' 字');
+    out.push('- 摘要耗时：' + (meta.elapsed || 0) + ' 秒');
+    out.push('- 引擎：' + providerLabel(doc.provider) + '（' + (doc.provider || '-') + '）');
+    if (doc.warning) {
+      out.push('- 提示：' + doc.warning);
+    }
+    out.push('');
+    out.push('> 由纯本地运行的图文摘要工具生成，文档未上传任何服务器。');
+
+    return out.join('\n') + '\n';
+  }
+
+  function exportMarkdown() {
+    if (!state.doc) return;
+
+    var md = buildMarkdown();
+    var name = '摘要_' + fileStamp() + '.md';
+    var blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+
+    link.href = url;
+    link.download = name;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+
+    var hint = $('exportHint');
+    hint.textContent = '已导出 ' + name;
+    hint.hidden = false;
+    setTimeout(function () { hint.hidden = true; }, 4000);
+  }
+
+  // ---------------- 拖拽与选择 ----------------
+  var depth = 0;
+  var drop = $('drop');
+  var input = $('file');
+
+  drop.addEventListener('click', function () { input.click(); });
+  drop.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+  });
+  $('pick').addEventListener('click', function (e) {
+    e.stopPropagation();
+    input.click();
+  });
+  input.addEventListener('change', function () {
+    if (input.files && input.files[0]) startUpload(input.files[0]);
+  });
+
+  ['dragenter', 'dragover'].forEach(function (type) {
+    drop.addEventListener(type, function (e) {
+      e.preventDefault(); e.stopPropagation();
+      if (type === 'dragenter') depth += 1;
+      drop.classList.add('over');
+    });
+  });
+  drop.addEventListener('dragleave', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    depth -= 1;
+    if (depth <= 0) { depth = 0; drop.classList.remove('over'); }
+  });
+  drop.addEventListener('drop', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    depth = 0;
+    drop.classList.remove('over');
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length) startUpload(files[0]);
+  });
+  // 防止文件拖到页面空白处被浏览器直接打开
+  window.addEventListener('dragover', function (e) { e.preventDefault(); });
+  window.addEventListener('drop', function (e) { e.preventDefault(); });
+
+  $('reset').addEventListener('click', function () {
+    reset();
+    input.click();
+  });
+
+  $('againBtn').addEventListener('click', function () {
+    reset();
+    input.click();
+  });
+
+  $('exportBtn').addEventListener('click', exportMarkdown);
+
+  // ---------------- 启动：读 /info 显示引擎与保留期 ----------------
+  api('/info').then(function (data) {
+    var summary = data.summary || {};
+    var store = data.store || {};
+    state.retention = (data.privacy && data.privacy.retention_hours) || store.retention_hours || 24;
+
+    var badges = $('badges');
+    badges.textContent = '';
+
+    var engine = document.createElement('span');
+    engine.className = 'badge';
+    engine.textContent = '摘要引擎：';
+    var strong = document.createElement('b');
+    strong.textContent = providerLabel(summary.active === 'ollama'
+      ? 'ollama:' + (summary.ollama_model || '')
+      : summary.active);
+    engine.appendChild(strong);
+    badges.appendChild(engine);
+
+    var keep = document.createElement('span');
+    keep.className = 'badge';
+    keep.textContent = '保留 ' + state.retention + ' 小时后自动删除';
+    badges.appendChild(keep);
+
+    // 没装本机大模型时，明确告诉用户"降级了"，别让人以为功能缺了一块
+    setEngineBanner(data.engine_used || (summary && summary.active));
+
+    $('privacy').textContent =
+      '所有处理都在本机完成 · 结果与上传原文件在 ' + state.retention + ' 小时后自动删除';
+  }).catch(function () {
+    var badges = $('badges');
+    var warn = document.createElement('span');
+    warn.className = 'badge';
+    warn.textContent = '后端未就绪';
+    badges.appendChild(warn);
+  });
+})();
+</script>
+</body>
+</html>

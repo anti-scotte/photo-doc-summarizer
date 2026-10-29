@@ -1,0 +1,75 @@
+# ==========================================================================
+# 图文摘要项目 .gitignore
+# 原则：凡是「本机生成」或「体积大且能重装」的东西，一律不入库
+# ==========================================================================
+
+# ---------- 虚拟环境（150 MB+，可随时重建）----------
+venv/
+.venv/
+.venv*/
+env/
+ENV/
+.conda/
+
+# ---------- 运行时数据：绝对不能提交 ----------
+# data/ 里是任务数据库 + 用户上传的原始文件，属于隐私数据
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ---------- Python 缓存与构建产物 ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
+
+# ---------- 第三方库运行时缓存 ----------
+# jieba 首次分词会在工作目录生成约 9 MB 的 jieba.cache
+jieba.cache
+*.cache
+
+# ---------- 日志 ----------
+*.log
+logs/
+
+# ---------- 本地模型权重（GB 级）----------
+models/*.gguf
+models/*.bin
+models/*.safetensors
+models/*.onnx
+
+# ---------- 离线 wheel 包（要随仓库分发时用 git add -f vendor/）----------
+vendor/
+
+# ---------- 操作系统 ----------
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ---------- 编辑器 / IDE ----------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ---------- 测试与临时产物 ----------
+_test_*.py
+_smoke_test.py
+_check.js
+.scratch*/
+*.tmp
+*.bak
+*.orig
