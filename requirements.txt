@@ -1,11 +1,23 @@
-# 纯本地图文摘要系统 —— 最精简依赖
+# 纯本地图文摘要系统 —— 依赖清单
 # 适用：Windows / Python 3.10-3.12 / 无 GPU / 装完可断网运行
-# rapidocr-onnxruntime 自带检测+识别模型（约 15MB）以及 onnxruntime / opencv / numpy
+#
+# 许可合规：全部为宽松许可（MIT / BSD / Apache-2.0），
+# 不含任何 GPL / AGPL 组件，可与本项目 MIT 协议共存并再分发。
+#   fastapi, python-docx, jieba, python-multipart  -> MIT
+#   uvicorn, pypdf                                 -> BSD-3-Clause
+#   pillow                                         -> HPND (MIT-like)
+#   rapidocr-onnxruntime, pypdfium2                -> Apache-2.0
+#   onnxruntime / opencv / numpy 等传递依赖         -> MIT / Apache-2.0
 
 fastapi>=0.115,<1.0
 uvicorn>=0.32,<1.0
 python-multipart>=0.0.20
-pymupdf>=1.24,<1.26
+
+# PDF：文本层用 pypdf 抽；扫描件用 pypdfium2 渲染成图再 OCR
+# （pypdfium2 内置 PDFium 二进制，无需系统级安装）
+pypdf>=4.2,<7
+pypdfium2>=4.30,<6
+
 python-docx>=1.1,<2.0
 pillow>=10.4,<12
 rapidocr-onnxruntime>=1.3.24,<2
@@ -17,11 +29,8 @@ jieba>=0.42.1
 # redis / celery -> 用标准库 threading 做后台队列
 # tesseract      -> 需系统级安装，破坏"一键启动"
 # requests/httpx -> 调本机 Ollama 用标准库 urllib 就够
-#
-# --- 可选 ---
-# pypdf>=4.2     -> 只想用 pypdf 抽 PDF 文本层时才需要；没有它时
-#                   扫描件 PDF 无法渲染成图，会明确报错提示装 pymupdf
-#
+# PyMuPDF (AGPL) -> 许可不合规，已用 pypdf + pypdfium2 完全替代
+
 # --- 不在 pip 里 ---
 # Ollama（可选）  -> https://ollama.com 单独安装的本机服务，
 #                   装了并 pull 了模型，摘要会自动切到生成式

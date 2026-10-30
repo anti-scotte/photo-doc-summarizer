@@ -32,7 +32,7 @@
 
 | 阶段 | 做什么 | 用什么 |
 |---|---|---|
-| 抽取 | 图片 OCR、PDF 文本层 / 扫描页、Word 正文与表格 → 纯文本 | RapidOCR（ONNX）、PyMuPDF、python-docx |
+| 抽取 | 图片 OCR、PDF 文本层 / 扫描页、Word 正文与表格 → 纯文本 | RapidOCR（ONNX）、pypdf / pypdfium2、python-docx |
 | 摘要 | 纯文本 → 五栏结构化结果 | 本机 Ollama（有就用）／离线提取引擎（兜底） |
 | 交付 | 上传即返回 `task_id`，后台线程慢慢跑，前端轮询进度 | threading + SQLite |
 
@@ -102,7 +102,7 @@
 ### 第 1 步 · 拿到代码
 
 ```bash
-git clone <你的仓库地址> photo-doc-summarizer
+git clone https://github.com/anti-scotte/photo-doc-summarizer.git photo-doc-summarizer
 cd photo-doc-summarizer
 ```
 
@@ -144,8 +144,8 @@ cd photo-doc-summarizer
 | 类型 | 扩展名 | 处理方式 |
 |---|---|---|
 | 图片 | `.png` `.jpg` `.jpeg` `.webp` `.bmp` `.tif` `.tiff` | EXIF 方向纠正 → RapidOCR 识别 |
-| PDF（有文本层） | `.pdf` | PyMuPDF 直接抽文本，**不跑 OCR**（快） |
-| PDF（扫描件） | `.pdf` | 逐页渲染 200 dpi → OCR（最多前 50 页） |
+| PDF（有文本层） | `.pdf` | pypdf 抽文本；抽成乱码时自动换 pypdfium2 重抽，**不跑 OCR**（快） |
+| PDF（扫描件） | `.pdf` | pypdfium2 逐页渲染 200 dpi → OCR（最多前 50 页） |
 | Word | `.docx` | python-docx，正文 + 表格（表格按行打平成 `列 \| 列`） |
 | 纯文本 | `.txt` `.md` | 直读，UTF-8 / GBK 编码自动兜底 |
 
@@ -186,6 +186,7 @@ cd photo-doc-summarizer
 - **OCR 对图像质量高度敏感**：模糊、倾斜、逆光、手写字识别率会明显下降，可能有错字
 - **表格会被打平**：Word / PDF 表格转成 `列 | 列` 的纯文本，合并单元格会重复文本，**不保留表格结构**
 - **PDF 分栏排版按行读**，左右两栏可能交错
+- **部分中文 PDF 需要二次抽取**：pypdf 对使用 CID 字体（UniGB-UTF16-H 等）的中文 PDF 可能抽出乱码，此时会自动改用 pypdfium2 重抽；两者都失败才走 OCR，速度会慢一些但结果正确
 - **扫描件只 OCR 前 50 页**，超出部分会在正文里注明
 
 **离线提取引擎的边界（没装大模型时会走这条路）**
@@ -204,7 +205,7 @@ cd photo-doc-summarizer
 
 - 单机单实例：SQLite + 线程池，**不是分布式**，不面向多人同时使用
 - 仅 Windows 提供 `run.bat`；Linux / macOS 需手动起 uvicorn
-- PDF 引擎 PyMuPDF 采用 **AGPL-3.0**（比赛与个人使用无碍，商业使用需另购授权或换 `pypdf`）
+- PDF 引擎全部为宽松许可：**pypdf（BSD-3-Clause）+ pypdfium2（Apache-2.0）**，不含 AGPL / GPL 组件
 
 ---
 
@@ -263,5 +264,7 @@ photo-doc-summarizer/
 
 - **代码**：全部在本仓库，无闭源组件
 - **模型**：OCR 模型随 `rapidocr-onnxruntime` wheel 分发（Apache-2.0）；生成式摘要使用你本机安装的 Ollama 模型，仓库不分发任何模型权重
-- **依赖许可**：FastAPI (MIT)、uvicorn (BSD)、python-docx (MIT)、Pillow (HPND)、jieba (MIT)、rapidocr-onnxruntime (Apache-2.0)、**PyMuPDF (AGPL-3.0)**
+- **依赖许可**：全部为宽松许可（MIT / BSD / Apache-2.0），**无 GPL / AGPL 传染风险**
+  FastAPI (MIT)、uvicorn (BSD-3)、python-docx (MIT)、Pillow (HPND)、jieba (MIT)、
+  rapidocr-onnxruntime (Apache-2.0)、pypdf (BSD-3)、pypdfium2 (Apache-2.0)
 - **不含**：任何用户数据、任何真实文档、任何 API Key

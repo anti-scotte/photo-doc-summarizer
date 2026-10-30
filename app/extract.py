@@ -1,12 +1,14 @@
 """文件 → 纯文本。
 
-- 图片（jpg/png/webp/bmp/tif）：Pillow 解码 + EXIF 纠正 → RapidOCR 识别
-- PDF：优先 PyMuPDF（能抽文本层，也能把页面渲染成图做 OCR）
-       没有 PyMuPDF 时退到 pypdf（只能抽文本层，扫描件会明确报错）
-- Word（.docx）：python-docx，正文 + 表格一起取
-- txt/md：标准库直读，编码兜底
+全链路只用宽松许可（MIT / BSD / Apache-2.0）的依赖，不含任何 AGPL 组件：
 
-对上层只暴露两个东西：extract() 和 ExtractError。
+- 图片：Pillow 解码 + EXIF 纠正 → RapidOCR（Apache-2.0）识别
+- PDF 文本层：pypdf（BSD-3-Clause）抽取；若抽出来是乱码（中文 CID 字体常见），
+  自动改用 pypdfium2（Apache-2.0）再抽一次
+- PDF 扫描件：pypdfium2 把页面渲染成位图 → 交给同一套 OCR 引擎
+- Word：python-docx；纯文本：标准库直读
+
+对上层只暴露 extract() 和 ExtractError。
 """
 
 from __future__ import annotations
@@ -44,6 +46,9 @@ OCR_DPI = 200                 # 再高对识别率提升有限，耗时翻倍
 SCAN_CHARS_PER_PAGE = 20      # 平均每页少于这么多字 → 判定为扫描件
 MAX_PAGES = 200               # 文档页数硬上限
 OCR_PAGE_LIMIT = 50           # 扫描件最多 OCR 这么多页，其余跳过
+
+# 正常中英文里几乎不会出现的字符（Latin-1 补充与扩展区）
+_SUSPICIOUS = re.compile(r"[\u0080-\u024f]")
 
 
 class ExtractError(Exception):
@@ -159,75 +164,190 @@ def _read_image(path: Path) -> str:
 # ------------------------------ PDF ------------------------------
 
 def _read_pdf(path: Path, on_progress: Progress | None) -> Extracted:
-    try:
-        import fitz  # PyMuPDF
-    except ImportError:
-        return _pdf_with_pypdf(path, on_progress)
-    return _pdf_with_fitz(fitz, path, on_progress)
+    """先找文本层（快），有且正常就直接用；否则渲染成图走 OCR（慢但通用）。"""
+    pages, text = _pdf_probe_text(path)
 
+    if pages == 0:
+        raise ExtractError("bad_file", "PDF 里没有页面")
+    if pages > MAX_PAGES:
+        raise ExtractError("unsupported", f"超过 {MAX_PAGES} 页，请拆分后再上传")
 
-def _pdf_with_fitz(fitz: Any, path: Path, on_progress: Progress | None) -> Extracted:
-    try:
-        doc = fitz.open(str(path))
-    except Exception as exc:
-        raise ExtractError("bad_file", f"这个 PDF 打不开：{exc}") from exc
+    if len(re.sub(r"\s+", "", text)) >= SCAN_CHARS_PER_PAGE * pages:
+        return Extracted(_tidy(text), "pdf-text", pages=pages)
 
-    with doc:
-        pages = doc.page_count
-        if pages <= 0:
-            raise ExtractError("bad_file", "PDF 里没有页面")
-        if pages > MAX_PAGES:
-            raise ExtractError("unsupported", f"超过 {MAX_PAGES} 页，请拆分后再上传")
+    if on_progress:
+        on_progress(15, f"没有可用文本层（{pages} 页），改用 OCR")
 
-        text = "\n".join((page.get_text("text") or "") for page in doc)
-
-        # 有文本层就直接用，别白白跑一遍 OCR
-        if len(re.sub(r"\s+", "", text)) >= SCAN_CHARS_PER_PAGE * pages:
-            return Extracted(_tidy(text), "pdf-text", pages=pages)
-
-        if on_progress:
-            on_progress(15, f"没有文本层（{pages} 页），改用 OCR")
-
-        todo = min(pages, OCR_PAGE_LIMIT)
-        lines: list[str] = []
-        for index, page in enumerate(doc, 1):
-            if index > todo:
-                break
-            png = page.get_pixmap(dpi=OCR_DPI).tobytes("png")
-            lines.extend(ocr(png))
-            if on_progress and (index == todo or index % 3 == 0):
-                on_progress(15 + int(50 * index / todo), f"OCR 第 {index}/{todo} 页")
-
-        if pages > OCR_PAGE_LIMIT:
-            lines.append(f"（本 PDF 共 {pages} 页，仅识别前 {OCR_PAGE_LIMIT} 页）")
+    lines = _pdf_ocr(path, pages, on_progress)
+    if pages > OCR_PAGE_LIMIT:
+        lines.append(f"（本 PDF 共 {pages} 页，仅识别前 {OCR_PAGE_LIMIT} 页）")
     return Extracted(_tidy("\n".join(lines)), "pdf-ocr", pages=pages, used_ocr=True)
 
 
-def _pdf_with_pypdf(path: Path, on_progress: Progress | None) -> Extracted:
+def _pdf_probe_text(path: Path) -> tuple[int, str]:
+    """先 pypdf，抽出来是乱码就换 pypdfium2，都不行就交给 OCR。"""
+    pages, text = 0, ""
+    try:
+        pages, text = _pdf_text_pypdf(path)
+    except Exception as exc:                      # 打不开 / 加密 / 解析异常
+        log.warning("pypdf 抽取失败：%s", exc)
+
+    if _text_is_garbage(text):
+        try:
+            alt = _pdf_text_pdfium(path)
+        except Exception as exc:
+            log.warning("pypdfium2 抽取文本失败：%s", exc)
+            alt = ""
+        if not _text_is_garbage(alt):
+            log.info("pypdf 结果不可用，已改用 pypdfium2 抽取文本层")
+            text = alt
+
+    if pages == 0:
+        pages = _pdf_page_count(path)
+    return pages, text
+
+
+def _pdf_text_pypdf(path: Path) -> tuple[int, str]:
+    """用 pypdf（BSD-3-Clause）抽文本层。"""
     try:
         from pypdf import PdfReader
     except ImportError as exc:
-        raise ExtractError("missing_dep", "缺少 pymupdf（也没有 pypdf），请重新运行 run.bat") from exc
-
-    if on_progress:
-        on_progress(15, "读取 PDF 文本层")
+        raise ExtractError("missing_dep", "缺少 pypdf，请重新运行 run.bat") from exc
 
     try:
         reader = PdfReader(str(path))
     except Exception as exc:
         raise ExtractError("bad_file", f"这个 PDF 打不开：{exc}") from exc
 
-    pages = len(reader.pages)
-    if pages > MAX_PAGES:
-        raise ExtractError("unsupported", f"超过 {MAX_PAGES} 页，请拆分后再上传")
+    if getattr(reader, "is_encrypted", False):
+        try:
+            reader.decrypt("")                    # 很多 PDF 只设了权限密码
+        except Exception as exc:
+            raise ExtractError("bad_file", "这个 PDF 有密码保护，请先解除加密再上传") from exc
 
-    text = "\n".join((page.extract_text() or "") for page in reader.pages)
-    if not re.sub(r"\s+", "", text):
-        raise ExtractError(
-            "empty",
-            "这个 PDF 是扫描件（没有文本层），pypdf 无法把它转成图片；请安装 pymupdf 后重试",
-        )
-    return Extracted(_tidy(text), "pdf-text", pages=pages)
+    pages = len(reader.pages)
+    chunks: list[str] = []
+    for page in reader.pages:
+        try:
+            chunks.append(page.extract_text() or "")
+        except Exception:                         # 单页失败不影响整份
+            chunks.append("")
+    return pages, "\n".join(chunks)
+
+
+def _pdf_text_pdfium(path: Path) -> str:
+    """用 pypdfium2（Apache-2.0）抽文本层，对中文 CID 字体更可靠。"""
+    pdfium = _import_pdfium()
+    pdf = pdfium.PdfDocument(str(path))
+    parts: list[str] = []
+    try:
+        for index in range(len(pdf)):
+            page = pdf[index]
+            try:
+                textpage = page.get_textpage()
+                try:
+                    read = getattr(textpage, "get_text_bounded", None) or textpage.get_text_range
+                    parts.append(read() or "")
+                finally:
+                    _safe_close(textpage)
+            finally:
+                _safe_close(page)
+    finally:
+        _safe_close(pdf)
+    return "\n".join(parts)
+
+
+def _pdf_page_count(path: Path) -> int:
+    try:
+        pdfium = _import_pdfium()
+        pdf = pdfium.PdfDocument(str(path))
+        try:
+            return len(pdf)
+        finally:
+            _safe_close(pdf)
+    except Exception as exc:
+        raise ExtractError("bad_file", f"这个 PDF 打不开：{exc}") from exc
+
+
+def _pdf_ocr(path: Path, pages: int, on_progress: Progress | None) -> list[str]:
+    """把 PDF 页面渲染成位图，逐页交给 OCR。"""
+    pdfium = _import_pdfium()
+    try:
+        pdf = pdfium.PdfDocument(str(path))
+    except Exception as exc:
+        raise ExtractError("bad_file", f"这个 PDF 打不开：{exc}") from exc
+
+    todo = min(pages, OCR_PAGE_LIMIT)
+    lines: list[str] = []
+    try:
+        for index in range(todo):
+            lines.extend(ocr(_render_page(pdf, index)))
+            if on_progress and (index + 1 == todo or (index + 1) % 3 == 0):
+                on_progress(15 + int(50 * (index + 1) / todo), f"OCR 第 {index + 1}/{todo} 页")
+    finally:
+        _safe_close(pdf)
+    return lines
+
+
+def _render_page(pdf: Any, index: int) -> bytes:
+    """把某一页渲染成 PNG 字节（pypdfium2 → PIL → BytesIO）。"""
+    page = pdf[index]
+    bitmap = None
+    try:
+        bitmap = page.render(scale=OCR_DPI / 72.0)    # PDF 坐标系按 72 dpi，按比例放大
+        image = bitmap.to_pil()
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+        buffer = io.BytesIO()
+        image.save(buffer, format="PNG")
+        return buffer.getvalue()
+    except Exception as exc:
+        raise ExtractError("bad_file", f"第 {index + 1} 页渲染失败：{exc}") from exc
+    finally:
+        _safe_close(bitmap)
+        _safe_close(page)
+
+
+def _import_pdfium() -> Any:
+    try:
+        import pypdfium2
+    except ImportError as exc:
+        raise ExtractError("missing_dep", "缺少 pypdfium2，请重新运行 run.bat") from exc
+    return pypdfium2
+
+
+def _safe_close(obj: Any) -> None:
+    """pypdfium2 的对象建议显式 close，但版本间有差异，这里做保护。"""
+    if obj is None:
+        return
+    close = getattr(obj, "close", None)
+    if callable(close):
+        try:
+            close()
+        except Exception:
+            pass
+
+
+def _text_is_garbage(text: str) -> bool:
+    """抽出来的文本是否不可用（空、过短、或明显是乱码）。"""
+    clean = re.sub(r"\s+", "", text)
+    if len(clean) < 8:
+        return True
+    return not _text_looks_natural(clean)
+
+
+def _text_looks_natural(text: str) -> bool:
+    """判断文本像不像正常文字。
+
+    pypdf 遇到中文 CID 字体（UniGB-UTF16-H 之类）时，会把字节直接映射成拉丁
+    字符，产出「fzýR6N§~¿[c^¦YvØb¥TJ」这种有长度、没意义的东西。
+    正常中英文里几乎不会出现拉丁补充/扩展区字符，用它的占比就能区分开。
+    """
+    clean = re.sub(r"\s+", "", text)
+    if len(clean) < 8:
+        return False
+    suspicious = len(_SUSPICIOUS.findall(clean))
+    return suspicious / len(clean) <= 0.02
 
 
 # ------------------------------ OCR ------------------------------
