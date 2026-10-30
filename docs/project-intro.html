@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>图文摘要 · 项目介绍</title>
+<style>
+  /* ================= A4 打印设置 ================= */
+  @page { size: A4; margin: 20mm; }
+
+  :root {
+    --ink:    #10141c;
+    --body:   #2b3444;
+    --sub:    #5d6879;
+    --mute:   #98a2b3;
+    --rule:   #e3e7ee;
+    --hair:   #eef1f6;
+    --accent: #1f4fd8;
+    --soft:   #f4f7ff;
+    --warm:   #a8581e;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC", "Hiragino Sans GB",
+                 "Source Han Sans SC", "SimHei", "黑体", sans-serif;
+    color: var(--body);
+    font-size: 10.3pt;
+    line-height: 1.82;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  @media screen {
+    body { background: #eceef2; padding: 12mm 0; }
+    .sheet {
+      width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm;
+      background: #fff; box-shadow: 0 4px 28px rgba(16, 22, 36, .12);
+    }
+  }
+  @media print {
+    .sheet { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; background: none; }
+  }
+
+  /* ================= 封面 ================= */
+  .cover { padding-bottom: 8mm; }
+
+  .eyebrow {
+    font-size: 8.2pt;
+    letter-spacing: .26em;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 6mm;
+  }
+
+  h1 {
+    font-size: 31pt;
+    line-height: 1.18;
+    letter-spacing: -.01em;
+    font-weight: 800;
+    color: var(--ink);
+    margin: 0 0 6mm;
+  }
+
+  .tagline {
+    font-size: 12.4pt;
+    line-height: 1.7;
+    color: var(--sub);
+    margin: 0;
+  }
+
+  .rule-heavy { height: 2px; background: var(--ink); margin: 8mm 0 4mm; }
+
+  .metrics { display: flex; }
+  .metric { flex: 1 1 0; }
+  .metric .v {
+    font-size: 17pt; font-weight: 800; color: var(--ink);
+    line-height: 1.15; letter-spacing: -.01em;
+  }
+  .metric .k { font-size: 8.2pt; color: var(--mute); margin-top: 1mm; }
+
+  /* ================= 章节 ================= */
+  .part { margin-top: 11mm; }
+
+  .part-head {
+    display: flex;
+    align-items: baseline;
+    gap: 4mm;
+    padding-bottom: 2mm;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 5mm;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  .part-head .idx {
+    font-size: 9pt; font-weight: 800; letter-spacing: .16em; color: var(--accent);
+  }
+  .part-head h2 {
+    font-size: 15.4pt; font-weight: 800; color: var(--ink);
+    margin: 0; letter-spacing: .01em;
+  }
+  .part-head .aside {
+    margin-left: auto; font-size: 8.4pt; color: var(--mute); letter-spacing: .06em;
+  }
+
+  /* ================= 大标题（核心概念）================= */
+  .feature { margin-bottom: 9mm; break-inside: avoid; }
+
+  .feature .label {
+    font-size: 8pt;
+    font-weight: 800;
+    letter-spacing: .2em;
+    color: var(--accent);
+    margin-bottom: 2mm;
+  }
+
+  .feature h3 {
+    font-size: 25pt;
+    line-height: 1.24;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: -.01em;
+    margin: 0 0 2.5mm;
+  }
+
+  .feature .sub {
+    font-size: 10.6pt;
+    color: var(--sub);
+    margin: 0 0 4mm;
+    line-height: 1.7;
+  }
+
+  p { margin: 0 0 2.6mm; }
+  strong { font-weight: 700; color: var(--ink); }
+  .accent { color: var(--accent); font-weight: 700; }
+
+  /* 三层降级 */
+  .layers { margin: 0 0 3mm; }
+  .layer {
+    display: flex;
+    gap: 4mm;
+    padding: 3mm 0;
+    border-top: 1px solid var(--hair);
+    break-inside: avoid;
+  }
+  .layer:last-child { border-bottom: 1px solid var(--hair); }
+  .layer .no {
+    flex: 0 0 9mm;
+    font-size: 15pt; font-weight: 800; color: var(--accent);
+    line-height: 1.1; letter-spacing: -.02em;
+  }
+  .layer .body { flex: 1 1 0; }
+  .layer .name { font-size: 10.4pt; font-weight: 700; color: var(--ink); margin-bottom: .8mm; }
+  .layer .desc { font-size: 9.2pt; color: var(--sub); line-height: 1.62; }
+  .layer .time {
+    flex: 0 0 26mm;
+    text-align: right;
+    font-size: 9pt; color: var(--mute);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 五栏 */
+  table { width: 100%; border-collapse: collapse; margin: 1mm 0 3mm; break-inside: avoid; }
+  th {
+    text-align: left; font-size: 8.4pt; font-weight: 700; color: var(--sub);
+    letter-spacing: .04em; padding: 2mm 3mm 2mm 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  td {
+    padding: 2.4mm 3mm 2.4mm 0; font-size: 9.3pt;
+    border-bottom: 1px solid var(--hair); vertical-align: top;
+  }
+  td.k { font-weight: 700; color: var(--ink); white-space: nowrap; }
+  td.k .dot { color: var(--accent); margin-right: 2mm; }
+
+  .highlight-row td { background: var(--soft); }
+
+  .callout {
+    border-left: 2.5px solid var(--accent);
+    padding: 1mm 0 1mm 4mm;
+    margin: 4mm 0;
+    break-inside: avoid;
+  }
+  .callout p { margin: 0; font-size: 9.4pt; }
+
+  /* 场景 */
+  .scenes { margin: 1mm 0 2mm; }
+  .scene {
+    display: flex; gap: 4mm; padding: 3mm 0;
+    border-top: 1px solid var(--hair);
+  }
+  .scene:last-child { border-bottom: 1px solid var(--hair); }
+  .scene .n {
+    flex: 0 0 9mm; font-size: 9pt; font-weight: 800; color: var(--mute); letter-spacing: .1em;
+    padding-top: .6mm;
+  }
+  .scene .body { flex: 1 1 0; }
+  .scene .name { font-size: 10.2pt; font-weight: 700; color: var(--ink); margin-bottom: .8mm; }
+  .scene .desc { font-size: 9.2pt; color: var(--sub); line-height: 1.62; }
+
+  ul.plain { margin: 0 0 2.5mm; padding-left: 4.5mm; }
+  ul.plain li { margin-bottom: 1.2mm; font-size: 9.4pt; }
+
+  code, .mono {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 8.6pt;
+    background: #f6f8fb;
+    border: 1px solid var(--hair);
+    border-radius: 1mm;
+    padding: .3mm 1.4mm;
+    color: var(--sub);
+  }
+
+  .closing {
+    margin-top: 12mm; padding-top: 4mm;
+    border-top: 1px solid var(--rule);
+    display: flex; justify-content: space-between; gap: 6mm;
+    font-size: 8.4pt; color: var(--mute); line-height: 1.7;
+  }
+  .closing b { color: var(--ink); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <!-- ==================== 封面 ==================== -->
+  <header class="cover">
+    <div class="eyebrow">WEB 应用开发比赛 · 项目介绍</div>
+    <h1>图文摘要<br>纯本地五栏摘要系统</h1>
+    <p class="tagline">
+      把图片或 PDF / Word 拖进浏览器，几秒内得到
+      「讲了什么 / 结论 / 关键数字 / 待办 / 存疑」五栏结构化摘要。<br>
+      全程本机运行 · 不联网 · 不需要 GPU · 零外部服务
+    </p>
+    <div class="rule-heavy"></div>
+    <div class="metrics">
+      <div class="metric"><div class="v">5</div><div class="k">结构栏位</div></div>
+      <div class="metric"><div class="v">3</div><div class="k">层弹性降级</div></div>
+      <div class="metric"><div class="v">0</div><div class="k">外部服务依赖</div></div>
+      <div class="metric"><div class="v">24h</div><div class="k">原件自动销毁</div></div>
+      <div class="metric"><div class="v">MIT</div><div class="k">开源许可</div></div>
+    </div>
+  </header>
+
+  <!-- ==================== 01 技术创新 ==================== -->
+  <section class="part">
+    <div class="part-head">
+      <span class="idx">01</span>
+      <h2>技术创新</h2>
+      <span class="aside">30%</span>
+    </div>
+
+    <!-- 大标题：弹性降级 -->
+    <div class="feature">
+      <div class="label">CORE 01</div>
+      <h3>三层弹性降级架构</h3>
+      <p class="sub">
+        任何一层挂掉，都照样出结果。<strong>这不是容错补丁，而是整个系统的骨架。</strong>
+      </p>
+
+      <div class="layers">
+        <div class="layer">
+          <div class="no">L1</div>
+          <div class="body">
+            <div class="name">本机大模型（Ollama）</div>
+            <div class="desc">
+              启动与每次摘要前真实探测 <span class="mono">/api/tags</span>，确认已装模型才启用；
+              指定模型不存在时逐个尝试其他候选模型。
+            </div>
+          </div>
+          <div class="time">5 – 24 秒</div>
+        </div>
+        <div class="layer">
+          <div class="no">L2</div>
+          <div class="body">
+            <div class="name">离线 TextRank 引擎</div>
+            <div class="desc">
+              jieba 分词 + TextRank 词权重 + MMR 去重选句。
+              没装 Ollama、连不上、超时、格式错误，全部落到这一层，纯 CPU 毫秒级。
+            </div>
+          </div>
+          <div class="time">毫秒级</div>
+        </div>
+        <div class="layer">
+          <div class="no">L3</div>
+          <div class="body">
+            <div class="name">规则正则兜底</div>
+            <div class="desc">
+              五栏由标点与标记词切分；即使兜底引擎也异常，仍返回最小可用结果。
+              <strong>没有任何一条代码路径会把异常抛给用户。</strong>
+            </div>
+          </div>
+          <div class="time">毫秒级</div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <p>
+          接口永远返回<span class="accent">结构完全一致的合法五栏 JSON</span>，
+          前端不需要为"降级了"写第二套渲染逻辑；页面顶部与
+          <span class="mono">engine_used</span> 字段让当前引擎随时可验证。
+        </p>
+      </div>
+    </div>
+
+    <!-- 大标题：五栏约束 -->
+    <div class="feature">
+      <div class="label">CORE 02</div>
+      <h3>五栏强约束提取</h3>
+      <p class="sub">
+        用规则把模型拉回真实。<strong>存疑栏是对抗大模型幻觉的机制，不是装饰。</strong>
+      </p>
+
+      <table>
+        <thead>
+          <tr><th style="width:22%">栏位</th><th>约束</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="k"><span class="dot">·</span>讲了什么</td><td>1–3 条，只描述内容范围</td></tr>
+          <tr><td class="k"><span class="dot">·</span>结论</td><td>作者的判断与最终结论</td></tr>
+          <tr><td class="k"><span class="dot">·</span>关键数字</td><td><strong>必须原样抄自正文并带单位，禁止换算与推算</strong></td></tr>
+          <tr><td class="k"><span class="dot">·</span>待办</td><td>写清"谁、在什么时候、做什么"</td></tr>
+          <tr class="highlight-row">
+            <td class="k"><span class="dot">·</span>存疑</td>
+            <td><strong>只写正文确实缺失或含糊的地方；没有就给空数组</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top:3mm">
+        提示词里写了硬规则：<em>"只依据正文，不许编造数字、人名或结论；数组宁可为空也不要凑数。"</em>
+        模型找不到结论时没有"编一段填满版面"的余地 ——
+        <strong>空下来的栏必须在存疑栏解释原因</strong>。离线模式下这条逻辑由规则保证，
+        某栏为空时自动写入"正文没有明确的结论性表述""正文里没有出现可核实的数字"等具体说明。
+      </p>
+
+      <div class="callout">
+        <p>
+          最终输出不是"看起来像摘要"，而是<span class="accent">每条都能溯源、每栏都有依据</span>。
+          离线模式下数字栏直接切原句，每一句都能回查原文。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 02 场景落地 ==================== -->
+  <section class="part">
+    <div class="part-head">
+      <span class="idx">02</span>
+      <h2>场景落地</h2>
+      <span class="aside">30%</span>
+    </div>
+
+    <p>
+      合同、内部报告、涉密材料不允许上传任何第三方服务器；内网机房、保密单位、出差现场根本没有公网。
+      云端 AI 摘要在这些场景里<strong>直接出局</strong>。
+    </p>
+
+    <table>
+      <thead><tr><th style="width:34%">真实痛点</th><th>本项目的解法</th></tr></thead>
+      <tbody>
+        <tr><td class="k">部署成本高</td><td><strong>解压即用</strong>：双击 <span class="mono">run.bat</span>，自动建环境 → 装依赖 → 起服务 → 打开浏览器</td></tr>
+        <tr><td class="k">没有 GPU</td><td>全部走 CPU：OCR 用 ONNX Runtime CPU Provider，模型仅十几 MB</td></tr>
+        <tr><td class="k">不能联网</td><td>装完依赖即可全程断网运行；支持 <span class="mono">vendor/</span> 目录离线安装</td></tr>
+        <tr><td class="k">机密文件</td><td>只绑 127.0.0.1，代码级硬闸拒绝非本机地址；原件与记录 24 小时自动销毁</td></tr>
+        <tr><td class="k">评委电脑没装 AI 环境</td><td>三层弹性降级兜底，<strong>不需要为了试用去装 Ollama</strong></td></tr>
+      </tbody>
+    </table>
+
+    <div class="scenes">
+      <div class="scene">
+        <div class="n">01</div>
+        <div class="body">
+          <div class="name">会议记录整理</div>
+          <div class="desc">白板照片、纸质签到、速记截图丢进去，直接出待办清单与责任人。</div>
+        </div>
+      </div>
+      <div class="scene">
+        <div class="n">02</div>
+        <div class="body">
+          <div class="name">学习笔记归档</div>
+          <div class="desc">论文、教材章节、行业报告批量处理，先看结论和数字，再决定要不要精读。</div>
+        </div>
+      </div>
+      <div class="scene">
+        <div class="n">03</div>
+        <div class="body">
+          <div class="name">机密文档处理</div>
+          <div class="desc">合同、内部文件不出本机；断网环境下同样可用，全程无外部请求。</div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:5mm">
+      <strong>实测速度</strong>　200 字文档离线提取约 <strong>4 秒</strong>；
+      1000 字文档本机大模型约 <strong>24 秒</strong>；A4 图片 OCR 首次 7.3 秒、模型常驻后 1.4 秒。
+      <br><span style="font-size:8.6pt;color:var(--mute)">
+      测试环境：Windows / Python 3.12 / 无独立显卡 / Ollama qwen2.5-coder:7b。端到端时间含上传、排队与界面刷新。</span>
+    </p>
+  </section>
+
+  <!-- ==================== 03 开源治理 ==================== -->
+  <section class="part">
+    <div class="part-head">
+      <span class="idx">03</span>
+      <h2>开源治理</h2>
+      <span class="aside">20%</span>
+    </div>
+
+    <p>
+      项目采用 <strong>MIT License</strong>。但早期版本使用 PyMuPDF 解析 PDF，
+      而它是 <strong>AGPL-3.0</strong> —— 其传染性会与 MIT 冲突，使项目无法在商业或闭源场景安全使用。
+    </p>
+
+    <p>
+      我们完整移除了该依赖，改用 <strong>pypdf（BSD-3-Clause）+ pypdfium2（Apache-2.0）</strong>：
+      文本层用 pypdf 抽取，识别到乱码时自动用 pypdfium2 二次抽取，扫描件则由 pypdfium2 渲染成图再交给 OCR。
+      <strong>功能不减、许可彻底干净</strong>。这是为合规主动做的重构，不是事后声明。
+    </p>
+
+    <table>
+      <thead><tr><th style="width:42%">依赖</th><th style="width:26%">许可</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td class="k">FastAPI / python-docx / jieba</td><td>MIT</td><td>Web 服务、Word 解析、中文分词</td></tr>
+        <tr><td class="k">uvicorn / pypdf</td><td>BSD-3-Clause</td><td>ASGI 服务器、PDF 文本抽取</td></tr>
+        <tr><td class="k">Pillow</td><td>HPND</td><td>图片解码与预处理</td></tr>
+        <tr><td class="k">rapidocr-onnxruntime / pypdfium2</td><td>Apache-2.0</td><td>OCR、PDF 渲染</td></tr>
+      </tbody>
+    </table>
+
+    <p style="margin-top:2mm">
+      <strong>结论：全链路无 GPL / AGPL 传染风险</strong>，可与 MIT 协议共存并自由再分发。
+    </p>
+
+    <p style="margin-top:4mm"><strong>社区规范与自动化</strong></p>
+    <ul class="plain">
+      <li><span class="mono">.github/workflows/python-app.yml</span>　CI：push / PR 触发 → Python 3.12 → 装依赖 → <span class="mono">compileall</span> 语法检查（已跑通）</li>
+      <li><span class="mono">.github/ISSUE_TEMPLATE/</span>　Bug 报告（含运行环境、所用引擎、复现步骤）与功能建议（含项目定位自查）</li>
+      <li><span class="mono">.github/PULL_REQUEST_TEMPLATE.md</span>　修改说明、变更类型、手动测试清单、<strong>合规检查清单</strong></li>
+      <li><span class="mono">CONTRIBUTING.md</span>　Issue / PR 流程、代码规范（禁止引入 GPL/AGPL）、分层职责、提交信息规范</li>
+    </ul>
+  </section>
+
+  <!-- ==================== 04 长期发展 ==================== -->
+  <section class="part">
+    <div class="part-head">
+      <span class="idx">04</span>
+      <h2>长期发展</h2>
+      <span class="aside">20%</span>
+    </div>
+
+    <div class="scenes">
+      <div class="scene">
+        <div class="n">01</div>
+        <div class="body">
+          <div class="name">支持更多文档格式（Excel / PPT）</div>
+          <div class="desc">
+            接入 openpyxl 与 python-pptx：Excel 按工作表抽取表头与关键数据行，把「关键数字」栏对齐到单元格；
+            PPT 抽取每页标题与要点。extract.py 已按扩展名分发，新增格式只加一个分支，不动上层逻辑。
+          </div>
+        </div>
+      </div>
+      <div class="scene">
+        <div class="n">02</div>
+        <div class="body">
+          <div class="name">引入多模态视觉大模型</div>
+          <div class="desc">
+            当前图片走 OCR 会丢失版面信息。计划用本地多模态模型直接理解页面截图，
+            识别图表趋势以补强「关键数字」与「存疑」两栏；仍只允许调用本机服务，三层降级不变。
+          </div>
+        </div>
+      </div>
+      <div class="scene">
+        <div class="n">03</div>
+        <div class="body">
+          <div class="name">完善社区贡献指南</div>
+          <div class="desc">
+            补充开发者文档与接口契约；增加自动化测试并接入 CI（当前仅语法检查）；
+            建立 Issue 标签体系与响应时限，补充 CODE_OF_CONDUCT，提供可直接复现的样例文件包。
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 结尾 ==================== -->
+  <div class="closing">
+    <div>
+      <b>图文摘要 · 纯本地五栏摘要系统</b><br>
+      MIT License © 2026 Photo-Doc-Summarizer Team
+    </div>
+    <div style="text-align:right">
+      github.com/anti-scotte/photo-doc-summarizer<br>
+      <span class="mono">git clone</span> 后双击 <span class="mono">run.bat</span> 即可运行
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
